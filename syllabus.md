@@ -58,27 +58,27 @@
 - Using memory components
 - Prompt templates and output parsers
 
-#### Module 9: LangChain Agents and Tools
+#### Module 9: LangChain Agents and Tools(#### TODO)
 - Creating an agent with tools
 - Implementing web search capabilities
 - Adding custom tools
 - Debugging agents
 
 ### Part 5: Deploying Local Models with Hugging Face
-#### Module 10: Introduction to Hugging Face Transformers
+#### Module 10: Introduction to Hugging Face Transformers(#### TODO)
 - Understanding Hugging Face's ecosystem
 - Setting up the environment for local models
 - Loading your first model
 - Basic inference
 
-#### Module 11: Advanced Local Model Deployment
+#### Module 11: Advanced Local Model Deployment(#### TODO)
 - Managing model formats and quantization
 - Optimizing for CPU/GPU
 - Handling different model architectures
 - Prompt formatting for different models
 
 ### Part 6: Production Considerations
-#### Module 12: Performance Optimization
+#### Module 12: Performance Optimization(#### TODO)
 - Caching strategies
 - Asynchronous processing
 - Streaming responses
