@@ -32,7 +32,7 @@ def ask_groq(question):
         return f"Error: {response.status_code}, {response.text}"
 
 if __name__ == "__main__":
-    question = "What is Groq and how does it compare to other AI platforms?"
+    question = "What is Groq and how does it compare to other AI platforms? Answer like a colorful pirate"
     print("Asking Groq:", question)
     answer = ask_groq(question)
     print("\nGroq's answer:")
