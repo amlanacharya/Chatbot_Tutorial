@@ -47,14 +47,19 @@ def chat_with_api(message, history, model_name):
         # Extract response
         bot_message = result.get("response", "Sorry, I couldn't process that request.")
         
-        # Return response and updated history
-        return "", history + [[message, bot_message]]
+        # Return response and updated history with message dictionaries
+        return "", history + [
+            {"role": "user", "content": message},
+            {"role": "assistant", "content": bot_message}
+        ]
     
     except Exception as e:
         error_message = f"Error: {str(e)}"
         print(error_message)
-        return "", history + [[message, error_message]]
-
+        return "", history + [
+            {"role": "user", "content": message},
+            {"role": "assistant", "content": error_message}
+        ]
 def clear_conversation():
     """Clear the conversation history on the API server"""
     try:
@@ -99,7 +104,7 @@ def create_chatbot_interface():
                 clear_btn = gr.Button("Clear Conversation")
         
         # Chat interface
-        chatbot = gr.Chatbot(height=500)
+        chatbot = gr.Chatbot(height=500, type="messages")
         msg = gr.Textbox(
             placeholder="Type your message here...",
             label="Your Message",

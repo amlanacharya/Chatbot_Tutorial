@@ -516,6 +516,52 @@ def get_models():
     ]
     return jsonify(models)
 
+@app.route('/api/parameters', methods=['GET'])
+def get_parameters():
+    """API endpoint to get parameter ranges for a model."""
+    try:
+        model_id = request.args.get('model', 'llama3-70b-8192')
+        
+        # Define parameter ranges for all models
+        # You can customize these ranges based on model capabilities
+        parameter_ranges = {
+            "temperature": {
+                "min": 0.0,
+                "max": 2.0,
+                "default": 0.7,
+                "step": 0.1
+            },
+            "top_p": {
+                "min": 0.0,
+                "max": 1.0,
+                "default": 0.9,
+                "step": 0.05
+            },
+            "frequency_penalty": {
+                "min": 0.0,
+                "max": 2.0,
+                "default": 0.0,
+                "step": 0.1
+            },
+            "presence_penalty": {
+                "min": 0.0,
+                "max": 2.0,
+                "default": 0.0,
+                "step": 0.1
+            },
+            "max_tokens": {
+                "min": 10,
+                "max": 4096,
+                "default": 1024,
+                "step": 10
+            }
+        }
+        
+        return jsonify(parameter_ranges)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"Starting Advanced Memory Chatbot API on port {port}...")

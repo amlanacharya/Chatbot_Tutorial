@@ -154,6 +154,19 @@ def get_sessions():
     
     return jsonify(session_list)
 
+@app.route('/', methods=['GET'])
+def index():
+    """Root endpoint that returns basic API information."""
+    return jsonify({
+        "message": "Groq Chatbot API is running",
+        "endpoints": [
+            {"path": "/api/chat", "method": "POST", "description": "Send a message to the chatbot"},
+            {"path": "/api/clear", "method": "POST", "description": "Clear conversation history"},
+            {"path": "/api/models", "method": "GET", "description": "Get available models"},
+            {"path": "/api/sessions", "method": "GET", "description": "Get active sessions"}
+        ]
+    })
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"Starting Groq Chatbot API on port {port}...")

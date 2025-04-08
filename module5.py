@@ -41,6 +41,9 @@ def fetch_models():
         st.error(f"Error fetching models: {e}")
         return {"Llama 3 (70B)": "llama3-70b-8192"}  # Default fallback
 
+# Global models dictionary
+models_dict = fetch_models()
+
 def chat_with_api(message):
     """Send message to API and get response"""
     try:
@@ -95,7 +98,6 @@ def main():
     st.sidebar.title("Settings")
     
     # Fetch available models
-    models_dict = fetch_models()
     model_names = list(models_dict.keys())
     
     # Model selection in sidebar
