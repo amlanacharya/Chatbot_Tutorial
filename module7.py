@@ -301,7 +301,6 @@ def main():
         st.caption(f"Session ID: {st.session_state.session_id}")
     
     # Tab 1: Chat Interface
-    # Add this code inside your tab1 section to complete the chat interface
     with tab1:
         st.header("Chat with Model")
         
@@ -332,7 +331,195 @@ def main():
             
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-
-# Add this code at the end of your file
+        # In the main() function, after handling tab1 (and tab2 if implemented)
+    with tab3:
+        st.header("Performance Metrics")
+        
+        # Fetch performance data
+        with st.spinner("Loading performance data..."):
+            performance_data = get_performance_stats()
+        
+        if performance_data:
+            # Create columns for different metrics
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Response Times")
+                # Create a DataFrame for response times
+                response_times = {
+                    model: data["avg_response_time"] 
+                    for model, data in performance_data.items()
+                }
+                df_times = pd.DataFrame({
+                    "Model": list(response_times.keys()),
+                    "Avg Response Time (s)": list(response_times.values())
+                })
+                
+                # Create a bar chart
+                fig = px.bar(
+                    df_times, 
+                    x="Model", 
+                    y="Avg Response Time (s)",
+                    title="Average Response Time by Model",
+                    color="Model"
+                )
+                st.plotly_chart(fig)
+            
+            with col2:
+                st.subheader("Usage")
+                # Create a DataFrame for usage
+                usage = {
+                    model: data["usage"]["requests"] 
+                    for model, data in performance_data.items()
+                }
+                df_usage = pd.DataFrame({
+                    "Model": list(usage.keys()),
+                    "Requests": list(usage.values())
+                })
+                
+                # Create a pie chart
+                fig = px.pie(
+                    df_usage, 
+                    values="Requests", 
+                    names="Model",
+                    title="Request Distribution by Model"
+                )
+                st.plotly_chart(fig)
+            
+            # Token usage table
+            st.subheader("Token Usage")
+            token_usage = {
+                model: data["usage"]["tokens"]
+                for model, data in performance_data.items()
+            }
+            df_tokens = pd.DataFrame({
+                "Model": list(token_usage.keys()),
+                "Tokens Used": list(token_usage.values())
+            })
+            st.dataframe(df_tokens)
+        else:
+            st.info("No performance data available yet. Try sending some messages first.")
+    with tab2:
+        st.header("Model Comparison")
+        
+        # Create a form for the comparison input
+        with st.form("comparison_form"):
+            # Prompt input
+            comparison_prompt = st.text_area(
+                "Enter a prompt to test across multiple models:",
+                height=100,
+                placeholder="Write a prompt here to compare how different models respond..."
+            )
+            
+            # System message (optional)
+            system_message = st.text_input(
+                "System message (optional):",
+                value="You are a helpful AI assistant.",
+                help="This sets the behavior context for the AI models."
+            )
+            
+            # Model selection
+            available_models = list(models_dict.values())
+            selected_models = st.multiselect(
+                "Select models to compare:",
+                options=available_models,
+                default=[available_models[0]] if available_models else [],
+                format_func=lambda x: next((m["name"] for m in st.session_state.models_info.values() if m["id"] == x), x)
+            )
+            
+            # Parameter settings for comparison
+            st.subheader("Parameters for comparison")
+            comp_temperature = st.slider(
+                "Temperature",
+                min_value=0.0,
+                max_value=2.0,
+                value=0.7,
+                step=0.1
+            )
+            
+            # Submit button
+            submit_button = st.form_submit_button("Compare Models")
+        
+        # Handle form submission
+        if submit_button and comparison_prompt and selected_models:
+            # Create parameters dictionary
+            parameters = {
+                "temperature": comp_temperature,
+                "max_tokens": 1024
+            }
+            
+            # Call the API to compare models
+            with st.spinner("Comparing models..."):
+                try:
+                    compare_models(comparison_prompt, selected_models, system_message, parameters)
+                except Exception as e:
+                    st.error(f"Error comparing models: {e}")
+        
+        # Display comparison results if available
+        if st.session_state.comparison_results:
+            st.subheader("Comparison Results")
+            
+            # Get the prompt
+            prompt = st.session_state.comparison_results.get("prompt", "")
+            st.write(f"**Prompt:** {prompt}")
+            
+            # Display results in tabs for each model
+            model_tabs = st.tabs([
+                st.session_state.models_info.get(result["model"], {}).get("name", result["model"]) 
+                for result in st.session_state.comparison_results.get("results", [])
+            ])
+            
+            # Fill each tab with the model's response
+            for i, tab in enumerate(model_tabs):
+                results = st.session_state.comparison_results.get("results", [])
+                if i < len(results):
+                    result = results[i]
+                    with tab:
+                        st.markdown("### Response")
+                        st.markdown(result.get("response", "No response"))
+                        
+                        # Display metrics
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("Response Time", f"{result.get('response_time', 0):.2f} sec")
+                        with col2:
+                            st.metric("Token Count", result.get("token_count", 0))
+            
+            # Create a comparison table
+            st.subheader("Performance Comparison")
+            comparison_data = []
+            for result in st.session_state.comparison_results.get("results", []):
+                model_name = st.session_state.models_info.get(result["model"], {}).get("name", result["model"])
+                comparison_data.append({
+                    "Model": model_name,
+                    "Response Time (s)": round(result.get("response_time", 0), 3),
+                    "Token Count": result.get("token_count", 0)
+                })
+            
+            if comparison_data:
+                df = pd.DataFrame(comparison_data)
+                st.dataframe(df)
+                
+                # Create a bar chart for response times
+                fig1 = px.bar(
+                    df, 
+                    x="Model", 
+                    y="Response Time (s)",
+                    title="Response Time Comparison",
+                    color="Model"
+                )
+                st.plotly_chart(fig1)
+                
+                # Create a bar chart for token counts
+                fig2 = px.bar(
+                    df, 
+                    x="Model", 
+                    y="Token Count",
+                    title="Token Count Comparison",
+                    color="Model"
+                )
+                st.plotly_chart(fig2)
+        else:
+            st.info("Enter a prompt and select models to compare their responses.")
 if __name__ == "__main__":
     main()  

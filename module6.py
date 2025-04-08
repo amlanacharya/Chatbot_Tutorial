@@ -77,6 +77,14 @@ class ConversationMemory:
         self.messages = [{"role": "system", "content": system_message}]
         self.created_at = time.time()
         self.last_updated = time.time()
+        self.model = "llama3-70b-8192"  # Default model
+        self.parameters = {  # Default parameters
+            "temperature": 0.7,
+            "max_tokens": 1024,
+            "top_p": 0.9,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0
+        }
     
     def add_message(self, role, content):
         """
@@ -100,6 +108,25 @@ class ConversationMemory:
     def get_token_count(self):
         """Get estimated token count of conversation"""
         return TokenCounter.count_conversation_tokens(self.messages)
+    
+    def set_model(self, model):
+        """Set the model for this conversation"""
+        self.model = model
+        
+    def get_model(self):
+        """Get the current model"""
+        return self.model
+        
+    def set_parameters(self, parameters):
+        """Set parameters for this conversation"""
+        # Update only provided parameters
+        for key, value in parameters.items():
+            if key in self.parameters:
+                self.parameters[key] = value
+        
+    def get_parameters(self):
+        """Get the current parameters"""
+        return self.parameters
 
 
 class WindowMemory(ConversationMemory):
@@ -296,6 +323,13 @@ class MemoryManager:
     def __init__(self, api_key):
         self.sessions = {}
         self.api_key = api_key
+        # Store model-specific performance stats
+        self.performance_stats = {
+            "llama3-70b-8192": {"total_requests": 0, "avg_response_time": 0, "usage": {"requests": 0, "tokens": 0}},
+            "llama3-8b-8192": {"total_requests": 0, "avg_response_time": 0, "usage": {"requests": 0, "tokens": 0}},
+            "mixtral-8x7b-32768": {"total_requests": 0, "avg_response_time": 0, "usage": {"requests": 0, "tokens": 0}},
+            "gemma-7b-it": {"total_requests": 0, "avg_response_time": 0, "usage": {"requests": 0, "tokens": 0}}
+        }
     
     def get_memory(self, session_id, memory_type="window", system_message="You are a helpful AI assistant."):
         """
@@ -343,9 +377,27 @@ class MemoryManager:
                 "message_count": len(memory.messages) - 1,  # Exclude system message
                 "token_count": memory.get_token_count(),
                 "created_at": memory.created_at,
-                "last_updated": memory.last_updated
+                "last_updated": memory.last_updated,
+                "model": memory.get_model()
             })
         return info
+    
+    def update_performance_stats(self, model, response_time, tokens):
+        """Update performance statistics for a model"""
+        if model in self.performance_stats:
+            stats = self.performance_stats[model]
+            stats["total_requests"] += 1
+            stats["usage"]["requests"] += 1
+            stats["usage"]["tokens"] += tokens
+            
+            # Update average response time
+            stats["avg_response_time"] = (
+                (stats["avg_response_time"] * (stats["total_requests"] - 1)) + response_time
+            ) / stats["total_requests"]
+    
+    def get_performance_stats(self):
+        """Get performance statistics for all models"""
+        return self.performance_stats
 
 # Create a memory manager
 memory_manager = MemoryManager(GROQ_API_KEY)
@@ -365,6 +417,9 @@ def chat():
     }
     """
     try:
+        # Record start time for performance tracking
+        start_time = time.time()
+        
         # Get request data
         data = request.json
         
@@ -393,11 +448,24 @@ def chat():
         # Get or create memory for this session
         memory = memory_manager.get_memory(session_id, memory_type, system_message)
         
+        # Update model if specified
+        if model:
+            memory.set_model(model)
+        
         # Add user message to memory
         memory.add_message("user", message)
         
         # Get conversation messages for the API
         messages = memory.get_messages()
+        
+        # Use the model and parameters stored in memory
+        model = memory.get_model()
+        parameters = memory.get_parameters()
+        temperature = parameters.get('temperature', 0.7)
+        max_tokens = parameters.get('max_tokens', 1024)
+        top_p = parameters.get('top_p', 0.9)
+        frequency_penalty = parameters.get('frequency_penalty', 0.0)
+        presence_penalty = parameters.get('presence_penalty', 0.0)
         
         # Prepare API request to Groq
         url = "https://api.groq.com/openai/v1/chat/completions"
@@ -408,8 +476,11 @@ def chat():
         groq_data = {
             "model": model,
             "messages": messages,
-            "temperature": data.get('temperature', 0.7),
-            "max_tokens": data.get('max_tokens', 1024)
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "top_p": top_p,
+            "frequency_penalty": frequency_penalty,
+            "presence_penalty": presence_penalty
         }
         
         # Send request to Groq API
@@ -426,6 +497,16 @@ def chat():
         # Get token counts for information
         token_count = memory.get_token_count()
         
+        # Calculate response time
+        response_time = time.time() - start_time
+        
+        # Update performance stats
+        memory_manager.update_performance_stats(
+            model, 
+            response_time, 
+            token_count  # This is a rough estimate, ideally use the token count from the API response
+        )
+        
         # Return response to client
         return jsonify({
             "response": assistant_message,
@@ -433,7 +514,12 @@ def chat():
             "model": model,
             "memory_type": memory_type,
             "token_count": token_count,
-            "memory_size": len(memory.messages) - 1  # Exclude system message
+            "memory_size": len(memory.messages) - 1,  # Exclude system message
+            "response_time": response_time,
+            "stats": {
+                "response_time": response_time,
+                "token_count": token_count
+            }
         })
         
     except requests.exceptions.RequestException as e:
@@ -509,10 +595,30 @@ def get_models():
     """API endpoint to get available models."""
     # Return list of available models
     models = [
-        {"id": "llama3-70b-8192", "name": "Llama 3 (70B)", "context_length": 8192},
-        {"id": "llama3-8b-8192", "name": "Llama 3 (8B)", "context_length": 8192},
-        {"id": "mixtral-8x7b-32768", "name": "Mixtral 8x7B", "context_length": 32768},
-        {"id": "gemma-7b-it", "name": "Gemma 7B", "context_length": 8192}
+        {
+            "id": "llama3-70b-8192", 
+            "name": "Llama 3 (70B)", 
+            "context_length": 8192,
+            "strengths": ["High accuracy", "Complex reasoning", "Nuanced responses"]
+        },
+        {
+            "id": "llama3-8b-8192", 
+            "name": "Llama 3 (8B)", 
+            "context_length": 8192,
+            "strengths": ["Fast responses", "Good for simple tasks", "Low resource usage"]
+        },
+        {
+            "id": "mixtral-8x7b-32768", 
+            "name": "Mixtral 8x7B", 
+            "context_length": 32768,
+            "strengths": ["Very long context", "Good performance", "Diverse knowledge"]
+        },
+        {
+            "id": "gemma-7b-it", 
+            "name": "Gemma 7B", 
+            "context_length": 8192,
+            "strengths": ["Instruction-tuned", "Compact", "Good for general tasks"]
+        }
     ]
     return jsonify(models)
 
@@ -559,6 +665,203 @@ def get_parameters():
         
         return jsonify(parameter_ranges)
         
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# NEW ENDPOINTS FOR MODULE7.PY SUPPORT
+
+@app.route('/api/change-model', methods=['POST'])
+def change_model():
+    """
+    API endpoint to change the model for a session.
+    
+    Expected JSON body:
+    {
+        "session_id": "session_id",
+        "model": "new_model_id"
+    }
+    """
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        model = data.get('model')
+        
+        if not session_id or not model:
+            return jsonify({"error": "Missing session_id or model"}), 400
+            
+        # Get the memory for this session
+        if session_id not in memory_manager.sessions:
+            return jsonify({"error": "Session not found"}), 404
+            
+        memory = memory_manager.sessions[session_id]
+        
+        # Update the model
+        memory.set_model(model)
+        
+        # Return success with current parameters
+        return jsonify({
+            "status": "success", 
+            "model": model,
+            "parameters": memory.get_parameters()
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/update-parameters', methods=['POST'])
+def update_parameters():
+    """
+    API endpoint to update parameters for a session.
+    
+    Expected JSON body:
+    {
+        "session_id": "session_id",
+        "parameters": {
+            "temperature": 0.8,
+            "max_tokens": 2000,
+            ...
+        }
+    }
+    """
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        parameters = data.get('parameters', {})
+        
+        if not session_id:
+            return jsonify({"error": "Missing session_id"}), 400
+            
+        # Get the memory for this session
+        if session_id not in memory_manager.sessions:
+            return jsonify({"error": "Session not found"}), 404
+            
+        memory = memory_manager.sessions[session_id]
+        
+        # Update parameters
+        memory.set_parameters(parameters)
+        
+        # Return success with current parameters
+        return jsonify({
+            "status": "success", 
+            "parameters": memory.get_parameters()
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/compare-models', methods=['POST'])
+def compare_models():
+    """
+    API endpoint to compare multiple models on the same prompt.
+    
+    Expected JSON body:
+    {
+        "prompt": "Prompt to test",
+        "models": ["model1", "model2", ...],
+        "system_message": "System message" (optional),
+        "parameters": {
+            "temperature": 0.7,
+            ...
+        } (optional)
+    }
+    """
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        prompt = data.get('prompt')
+        models = data.get('models', [])
+        system_message = data.get('system_message', 'You are a helpful AI assistant.')
+        parameters = data.get('parameters', {})
+        
+        if not prompt:
+            return jsonify({"error": "No prompt provided"}), 400
+            
+        if not models:
+            return jsonify({"error": "No models provided"}), 400
+        
+        # Default parameters
+        temperature = parameters.get('temperature', 0.7)
+        max_tokens = parameters.get('max_tokens', 1024)
+        
+        # URL for API calls
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        # Compare each model
+        results = []
+        
+        for model in models:
+            start_time = time.time()
+            
+            # Create messages array
+            messages = [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt}
+            ]
+            
+            # Create request body
+            groq_data = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            try:
+                # Send request to Groq API
+                response = requests.post(url, headers=headers, json=groq_data)
+                response.raise_for_status()
+                result = response.json()
+                
+                # Extract assistant's response
+                assistant_message = result["choices"][0]["message"]["content"]
+                
+                # Calculate time
+                response_time = time.time() - start_time
+                
+                # Get token count (estimate)
+                token_count = TokenCounter.count_conversation_tokens(messages) + TokenCounter.estimate_tokens(assistant_message)
+                
+                # Add to results
+                results.append({
+                    "model": model,
+                    "response": assistant_message,
+                    "response_time": response_time,
+                    "token_count": token_count
+                })
+                
+                # Update performance stats
+                memory_manager.update_performance_stats(model, response_time, token_count)
+                
+            except Exception as e:
+                results.append({
+                    "model": model,
+                    "error": str(e),
+                    "response": "Error generating response"
+                })
+        
+        return jsonify({
+            "prompt": prompt,
+            "results": results
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/performance', methods=['GET'])
+def get_performance():
+    """API endpoint to get performance statistics for models."""
+    try:
+        # Get stats from memory manager
+        stats = memory_manager.get_performance_stats()
+        
+        return jsonify(stats)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
