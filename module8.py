@@ -3,13 +3,16 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 import uuid
+import requests
 
 # Import LangChain components
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
-from langchain.chat_models import ChatGroq
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import SystemMessage
+from langchain.llms.base import LLM
+from langchain.callbacks.manager import CallbackManager
+from typing import Any, List, Mapping, Optional, Union, Dict
 
 # Load environment variables
 load_dotenv()
@@ -26,9 +29,74 @@ CORS(app)  # Enable CORS for all routes
 # Dictionary to store conversation chains for different sessions
 conversation_chains = {}
 
+# Custom Groq Chat model implementation
+class GroqLLM(LLM):
+    """Custom implementation of a chat model for Groq"""
+    
+    model_name: str = "llama3-70b-8192"
+    temperature: float = 0.7
+    max_tokens: int = 1024
+    top_p: float = 0.9
+    groq_api_key: str = None
+    
+    def __init__(self, groq_api_key=None, model_name="llama3-70b-8192", temperature=0.7, max_tokens=1024, top_p=0.9):
+        """Initialize with model parameters"""
+        super().__init__()
+        self.groq_api_key = groq_api_key
+        self.model_name = model_name
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.top_p = top_p
+        
+        # Ensure API key is set
+        if not self.groq_api_key:
+            raise ValueError("groq_api_key must be provided")
+    
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        """Generate a response from the model."""
+        # Prepare API request
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.groq_api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "top_p": self.top_p
+        }
+        
+        # Add stop sequences if provided
+        if stop:
+            data["stop"] = stop
+            
+        # Send request to Groq API
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        result = response.json()
+        
+        # Return the content
+        return result["choices"][0]["message"]["content"]
+    
+    @property
+    def _llm_type(self) -> str:
+        """Return type of LLM."""
+        return "groq"
+
+    def _identifying_params(self) -> Mapping[str, Any]:
+        """Get the identifying parameters."""
+        return {
+            "model_name": self.model_name,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "top_p": self.top_p,
+        }
+
 def get_llm(model_name="llama3-70b-8192"):
     """Create and return a Groq LLM instance"""
-    return ChatGroq(
+    return GroqLLM(
         groq_api_key=GROQ_API_KEY,
         model_name=model_name,
         temperature=0.7,
@@ -39,20 +107,12 @@ def get_conversation_chain(session_id, model_name="llama3-70b-8192"):
     if session_id not in conversation_chains:
         llm = get_llm(model_name)
         
-        # Create a prompt template that includes conversation history
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful AI assistant that provides accurate and concise information."),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", "{input}")
-        ])
-        
         # Create memory for storing conversation history
-        memory = ConversationBufferMemory(return_messages=True, memory_key="history")
+        memory = ConversationBufferMemory()
         
         # Create the conversation chain
         chain = ConversationChain(
             llm=llm,
-            prompt=prompt,
             memory=memory,
             verbose=True
         )
@@ -70,17 +130,9 @@ def get_conversation_chain(session_id, model_name="llama3-70b-8192"):
         # Create new LLM with updated model
         llm = get_llm(model_name)
         
-        # Create a prompt template
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful AI assistant that provides accurate and concise information."),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", "{input}")
-        ])
-        
         # Create new chain with existing memory
         chain = ConversationChain(
             llm=llm,
-            prompt=prompt,
             memory=existing_memory,
             verbose=True
         )
@@ -202,15 +254,23 @@ def get_chat_history():
         # Get the conversation memory
         memory = conversation_chains[session_id]["chain"].memory
         
-        # Convert memory to a list of messages
+        # For standard ConversationBufferMemory, extract history in a simple format
         messages = []
         
-        for message in memory.chat_memory.messages:
-            if hasattr(message, 'content') and hasattr(message, 'type'):
-                role = "assistant" if message.type == "ai" else "user"
+        # Get the raw buffer and parse it manually
+        buffer = memory.buffer
+        # Simple parsing - this is a heuristic approach
+        lines = buffer.split('\n')
+        for line in lines:
+            if line.startswith('Human:'):
                 messages.append({
-                    "role": role,
-                    "content": message.content
+                    "role": "user",
+                    "content": line.replace('Human:', '').strip()
+                })
+            elif line.startswith('AI:'):
+                messages.append({
+                    "role": "assistant",
+                    "content": line.replace('AI:', '').strip()
                 })
                 
         return jsonify({"messages": messages})
