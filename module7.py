@@ -301,6 +301,7 @@ def main():
         st.caption(f"Session ID: {st.session_state.session_id}")
     
     # Tab 1: Chat Interface
+    # Add this code inside your tab1 section to complete the chat interface
     with tab1:
         st.header("Chat with Model")
         
@@ -308,3 +309,30 @@ def main():
         with st.expander("Current Parameter Settings"):
             for param, value in st.session_state.parameters.items():
                 st.write(f"**{param}:** {value}")
+        
+        # Display chat messages
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+        
+        # Chat input
+        if prompt := st.chat_input("Type your message here..."):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            # Display user message in chat message container
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            # Get AI response
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    assistant_response, stats = chat_with_api(prompt)
+                    st.markdown(assistant_response)
+            
+            # Add assistant response to chat history
+            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+
+# Add this code at the end of your file
+if __name__ == "__main__":
+    main()  
