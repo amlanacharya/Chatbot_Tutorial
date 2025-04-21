@@ -113,11 +113,11 @@
                                                                                                 ↓                    
 [Module 14]← [Module 13] ← [Module 12] ← [Module 11] ← [Module 10] ← [Module 9] ← [Module 8] ←   
 ```
-# 🚀 Module 14: From Chatbots to Agents - Making the Leap
+### 🚀 Module 14: From Chatbots to Agents - Making the Leap
 
-## 🤖 Understanding the Evolution
+#### 🤖 Understanding the Evolution
 
-### Key Differences Between Chatbots and Agents
+#### Key Differences Between Chatbots and Agents
 | Feature | Chatbots | AI Agents |
 |---------|----------|-----------|
 | **Primary Focus** | Conversation | Goal completion |
@@ -127,7 +127,7 @@
 | **Capabilities** | Information & responses | Planning & tool use |
 | **Autonomy** | Limited | Higher |
 
-### 🧠 Transforming a Conversational System Into an Agentic One
+#### 🧠 Transforming a Conversational System Into an Agentic One
 
 Agents build on chatbot foundations by adding:
 - 🎯 **Goal-oriented behavior** instead of just responding to queries
@@ -138,27 +138,27 @@ Agents build on chatbot foundations by adding:
 
 > 💡 **Key Insight:** Every agent has conversational abilities (like a chatbot), but not every chatbot has agentic capabilities.
 
-## 📋 Core Architectural Components for Agents
+#### 📋 Core Architectural Components for Agents
 
-### 1. Structured Outputs and Schema Enforcement
+#### 1. Structured Outputs and Schema Enforcement
 - Understanding Pydantic models for validation
 - Using structured output parsers
 - Implementing error handling for invalid responses
 - Creating reliable data pipelines between components
 
-### 2. State Management Beyond Conversations
+#### 2. State Management Beyond Conversations
 - Moving from ephemeral chat history to persistent state
 - Tracking task progress and system knowledge
 - Implementing state machines for workflow management
 - Handling state transitions and event triggers
 
-### 3. Reasoning and Planning Systems
+#### 3. Reasoning and Planning Systems
 - Breaking down complex tasks into manageable steps
 - Implementing Chain of Thought reasoning
 - Creating decision trees for logical flows
 - Building verification mechanisms for self-checking
 
-### 4. Tool Integration Frameworks
+#### 4. Tool Integration Frameworks
 - Understanding tool registries and discovery
 - Implementing function calling patterns
 - Creating tool selection logic
@@ -166,9 +166,9 @@ Agents build on chatbot foundations by adding:
 
 > **🏆 Quick Win:** By the end of this module, you'll transform your chatbot into a basic agent that can plan and execute multi-step tasks!
 
-## 🛠️ Hands-On Exercise: The Transformation
+#### 🛠️ Hands-On Exercise: The Transformation
 
-### Step 1: Analyze Your Current Chatbot
+#### Step 1: Analyze Your Current Chatbot
 ```python
 # Current chatbot pattern
 def chat_loop():
@@ -189,7 +189,7 @@ def chat_loop():
         print(f"Bot: {response}")
 ```
 
-### Step 2: Add a Simple Planning Component
+#### Step 2: Add a Simple Planning Component
 ```python
 def plan_task(task_description):
     """Break down a task into steps"""
@@ -210,7 +210,7 @@ def plan_task(task_description):
         return [{"step": 1, "description": "Unable to plan task, proceeding directly"}]
 ```
 
-### Step 3: Implement Basic Tool Use
+#### Step 3: Implement Basic Tool Use
 ```python
 # Simple tool registry
 tools = {
@@ -236,7 +236,7 @@ def execute_tool(tool_name, tool_input):
         return f"Tool '{tool_name}' not found"
 ```
 
-### Step 4: Create an Agent Loop with Decision Making
+#### Step 4: Create an Agent Loop with Decision Making
 ```python
 def agent_loop():
     # State goes beyond just conversation history
@@ -296,9 +296,9 @@ def agent_loop():
             print(f"Agent: {response}")
 ```
 
-## 🔄 Key Patterns for Agent Development
+#### 🔄 Key Patterns for Agent Development
 
-### 1. The Agent Loop
+#### 1. The Agent Loop
 ```
 LOOP:
   1. Receive input or observe environment
@@ -309,7 +309,7 @@ LOOP:
   6. Return to step 1
 ```
 
-### 2. State Transitions
+#### 2. State Transitions
 ```
 STATE:
   - Knowledge (what the agent knows)
@@ -318,7 +318,7 @@ STATE:
   - Tools (what capabilities are available)
 ```
 
-### 3. Planning Pattern
+#### 3. Planning Pattern
 ```
 PLAN:
   1. Understand the goal
@@ -329,7 +329,7 @@ PLAN:
   6. Adapt the plan when needed
 ```
 
-## 🎯 What's Next on Your Journey
+### 🎯 What's Next on Your Journey
 
 You've now taken the crucial first step from chatbots to agents! This foundation prepares you for:
 
