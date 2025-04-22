@@ -1,0 +1,27 @@
+# Core dependencies
+flask>=2.0.0
+python-dotenv>=1.0.0
+requests>=2.25.0
+transformers>=4.30.0
+gradio>=3.50.0
+
+# Deployment and containerization
+gunicorn>=20.1.0
+uvicorn>=0.15.0
+fastapi>=0.95.0
+
+# Monitoring and logging
+prometheus-client>=0.14.0
+python-json-logger>=2.0.0
+opentelemetry-api>=1.15.0
+opentelemetry-sdk>=1.15.0
+opentelemetry-exporter-prometheus>=1.15.0
+
+# Cloud deployment
+boto3>=1.26.0  # For AWS
+azure-storage-blob>=12.14.0  # For Azure
+google-cloud-storage>=2.7.0  # For GCP
+
+# Docker-related (for local development)
+docker>=6.0.0
+docker-compose>=1.29.0
