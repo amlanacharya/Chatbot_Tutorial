@@ -32,11 +32,3 @@ The diagrams in this directory include:
 
 These diagrams are created using Mermaid syntax, which is supported by many Markdown viewers including GitHub. Simply open the `.md` files to view the diagrams.
 
-## How to Edit
-
-To edit these diagrams:
-
-1. Open the corresponding `.md` file
-2. Modify the Mermaid syntax between the triple backticks
-3. Preview the changes using a Markdown editor that supports Mermaid
-4. Save the file when satisfied with the changes
