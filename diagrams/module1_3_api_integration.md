@@ -27,7 +27,7 @@ sequenceDiagram
 
     User->>Module2: Initialize GroqChatbot
     Module2->>Module2: Set up conversation history
-    
+
     loop Conversation
         User->>Module2: Send message
         Module2->>Module2: Add user message to history
@@ -36,13 +36,13 @@ sequenceDiagram
         Module2->>Module2: Add assistant response to history
         Module2-->>User: Display response
     end
-    
+
     alt Clear History
         User->>Module2: Request to clear history
         Module2->>Module2: Reset conversation history
         Module2-->>User: Confirm history cleared
     end
-    
+
     alt Change Model
         User->>Module2: Request to change model
         Module2->>Module2: Update model setting
@@ -59,37 +59,37 @@ graph TD
         Routes[API Routes]
         ConversationStore[Conversation Store]
     end
-    
+
     subgraph "API Routes"
-        ChatEndpoint[/api/chat]
-        ClearEndpoint[/api/clear]
-        ModelsEndpoint[/api/models]
-        SessionsEndpoint[/api/sessions]
+        ChatEndpoint["API: /api/chat"]
+        ClearEndpoint["API: /api/clear"]
+        ModelsEndpoint["API: /api/models"]
+        SessionsEndpoint["API: /api/sessions"]
     end
-    
+
     subgraph "External"
         Client[Client Applications]
         GroqAPI[Groq API]
     end
-    
+
     Client -->|HTTP Requests| API
     API -->|Route Handling| Routes
     Routes -->|Chat Request| ChatEndpoint
     Routes -->|Clear History| ClearEndpoint
     Routes -->|Get Models| ModelsEndpoint
     Routes -->|Get Sessions| SessionsEndpoint
-    
+
     ChatEndpoint -->|Store| ConversationStore
     ChatEndpoint -->|API Call| GroqAPI
     ClearEndpoint -->|Clear| ConversationStore
     SessionsEndpoint -->|Read| ConversationStore
-    
+
     GroqAPI -->|Response| ChatEndpoint
     ChatEndpoint -->|Response| Client
     ClearEndpoint -->|Response| Client
     ModelsEndpoint -->|Response| Client
     SessionsEndpoint -->|Response| Client
-    
+
     classDef endpoint fill:#f96,stroke:#333,stroke-width:1px;
     class ChatEndpoint,ClearEndpoint,ModelsEndpoint,SessionsEndpoint endpoint;
 ```
@@ -102,13 +102,13 @@ flowchart TD
     Module1 -->|API Request| GroqAPI[Groq API]
     GroqAPI -->|Response| Module1
     Module1 -->|Display Result| User
-    
+
     User -->|Conversation| Module2[Module 2\nConversation Client]
     Module2 -->|Store History| History[(Conversation History)]
     Module2 -->|API Request with History| GroqAPI
     GroqAPI -->|Response| Module2
     Module2 -->|Display Result| User
-    
+
     Client([Client App]) -->|HTTP Request| Module3[Module 3\nFlask API]
     Module3 -->|Store Session| Sessions[(Session Store)]
     Module3 -->|API Request| GroqAPI
