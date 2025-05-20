@@ -112,7 +112,7 @@ def main():
     # Add clear button to sidebar
     if st.sidebar.button("Clear Conversation"):
         clear_conversation()
-        st.experimental_run()
+        st.run()
     
     # Display session ID in sidebar
     st.sidebar.divider()
